@@ -46,7 +46,15 @@ Create the PostgreSQL database:
 CREATE DATABASE peot;
 ```
 
-### 4. Run Application
+### 4. Seed Database
+
+```bash
+npm run seed
+```
+
+This creates default roles and admin user.
+
+### 5. Run Application
 
 ```bash
 npm run start:dev
@@ -156,7 +164,7 @@ Content-Type: application/json
 
 {
   "username": "admin",
-  "password": "password123"
+  "password": "admin123"
 }
 ```
 
@@ -404,46 +412,21 @@ import { ProductModule } from './modules/product/product.module';
 export class AppModule {}
 ```
 
-## Seeding Initial Data
+## Default User
 
-Create a seed script to add initial admin user and roles:
+After running `npm run seed`, the following user is created:
 
-```typescript
-// src/seeds/initial-seed.ts
-import { DataSource } from 'typeorm';
-import { Role } from '../modules/role/role.entity';
-import { User } from '../modules/user/user.entity';
-
-export async function seed(dataSource: DataSource) {
-  const roleRepository = dataSource.getRepository(Role);
-  const userRepository = dataSource.getRepository(User);
-
-  // Create Admin role
-  let adminRole = await roleRepository.findOne({ where: { name: 'Admin' } });
-  if (!adminRole) {
-    adminRole = roleRepository.create({ name: 'Admin', description: 'Administrator' });
-    await roleRepository.save(adminRole);
-  }
-
-  // Create admin user
-  const adminUser = await userRepository.findOne({ where: { username: 'admin' } });
-  if (!adminUser) {
-    const user = userRepository.create({
-      username: 'admin',
-      email: 'admin@example.com',
-      password: 'admin123',
-      firstName: 'System',
-      lastName: 'Administrator',
-      roles: [adminRole],
-    });
-    await userRepository.save(user);
-  }
-}
-```
+| Field | Value |
+|-------|-------|
+| Username | `admin` |
+| Password | `admin123` |
+| Email | `admin@example.com` |
+| Role | `Admin` |
 
 ## Commands
 
 ```bash
+npm run seed           # Seed database with default user and roles
 npm run start:dev      # Development with hot reload
 npm run build          # Build for production
 npm run start:prod     # Run production build
