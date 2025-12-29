@@ -1,6 +1,19 @@
-import { Repository, DeepPartial, FindOptionsWhere } from 'typeorm';
+import {
+  Repository,
+  DeepPartial,
+  FindOptionsWhere,
+  FindManyOptions,
+} from 'typeorm';
 import { NotFoundException } from '@nestjs/common';
 import { BaseEntity } from './base.entity';
+
+export interface PaginatedResult<T> {
+  data: T[];
+  total: number;
+  page: number;
+  limit: number;
+  totalPages: number;
+}
 
 export abstract class BaseService<T extends BaseEntity> {
   constructor(protected readonly repository: Repository<T>) {}
@@ -10,8 +23,28 @@ export abstract class BaseService<T extends BaseEntity> {
     return this.repository.save(entity);
   }
 
-  async findAll(): Promise<T[]> {
-    return this.repository.find();
+  async findAll(options?: FindManyOptions<T>): Promise<T[]> {
+    return this.repository.find(options);
+  }
+
+  async findPaginated(
+    page: number = 1,
+    limit: number = 10,
+    options?: FindManyOptions<T>,
+  ): Promise<PaginatedResult<T>> {
+    const skip = (page - 1) * limit;
+    const [data, total] = await this.repository.findAndCount({
+      ...options,
+      skip,
+      take: limit,
+    });
+    return {
+      data,
+      total,
+      page,
+      limit,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   async findOne(where: FindOptionsWhere<T>): Promise<T | null> {
@@ -37,5 +70,24 @@ export abstract class BaseService<T extends BaseEntity> {
   async remove(id: number): Promise<void> {
     const entity = await this.findById(id);
     await this.repository.remove(entity);
+  }
+
+  async softRemove(id: number): Promise<void> {
+    const entity = await this.findById(id);
+    await this.repository.softRemove(entity);
+  }
+
+  async restore(id: number): Promise<T> {
+    await this.repository.restore(id);
+    return this.findById(id);
+  }
+
+  async count(where?: FindOptionsWhere<T>): Promise<number> {
+    return this.repository.count({ where });
+  }
+
+  async exists(where: FindOptionsWhere<T>): Promise<boolean> {
+    const count = await this.repository.count({ where });
+    return count > 0;
   }
 }
